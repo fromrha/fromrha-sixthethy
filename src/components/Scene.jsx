@@ -1,30 +1,30 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, Suspense } from 'react'
 import { useFrame } from '@react-three/fiber'
 import Card from './Card'
 import { EffectComposer, Vignette, ChromaticAberration } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 
-const COUNT = 16 // Increased for better fill
-const SPACING = 2.05 // Tighter vertical spacing
-const TOTAL_HEIGHT = COUNT * SPACING
-
-// 4 Columns configuration, closer together
-const COLUMNS = [
-    { id: 0, xOffset: -4.65 },
-    { id: 1, xOffset: -1.55 },
-    { id: 2, xOffset: 1.55 },
-    { id: 3, xOffset: 4.65 }
-]
+const ROWS = 6
+const COLS = 6
+const SPACING_Y = 2.05
+const SPACING_X = 3.1
+const TOTAL_HEIGHT = ROWS * SPACING_Y
+const TOTAL_WIDTH = COLS * SPACING_X
 
 const Scene = () => {
-    const scrollRef = useRef(0)
-    const targetScrollRef = useRef(0)
+    // Scroll state for Y (Vertical)
+    const scrollRefY = useRef(0)
+    const targetScrollRefY = useRef(0)
+
+    // Scroll state for X (Horizontal)
+    const scrollRefX = useRef(0)
+    const targetScrollRefX = useRef(0)
 
     // Drag state
     const isDragging = useRef(false)
-    const lastY = useRef(0)
-    const velocity = useRef(0)
+    const lastPos = useRef({ x: 0, y: 0 })
+    const velocity = useRef({ x: 0, y: 0 })
 
     useEffect(() => {
         const preventDefault = (e) => e.preventDefault()
@@ -32,20 +32,28 @@ const Scene = () => {
 
         const handlePointerDown = (e) => {
             isDragging.current = true
-            lastY.current = e.clientY
-            velocity.current = 0
+            lastPos.current = { x: e.clientX, y: e.clientY }
+            velocity.current = { x: 0, y: 0 }
             document.body.style.cursor = 'grabbing'
         }
 
         const handlePointerMove = (e) => {
             if (!isDragging.current) return
 
-            const deltaY = e.clientY - lastY.current
-            lastY.current = e.clientY
+            const deltaX = e.clientX - lastPos.current.x
+            const deltaY = e.clientY - lastPos.current.y
 
-            const scrollDelta = deltaY * 0.015
-            targetScrollRef.current -= scrollDelta
-            velocity.current = -scrollDelta
+            lastPos.current = { x: e.clientX, y: e.clientY }
+
+            // Update Target Scroll
+            const scrollDeltaY = deltaY * 0.015
+            const scrollDeltaX = deltaX * 0.015
+
+            targetScrollRefY.current -= scrollDeltaY
+            targetScrollRefX.current -= scrollDeltaX
+
+            // Set Velocity
+            velocity.current = { x: -scrollDeltaX, y: -scrollDeltaY }
         }
 
         const handlePointerUp = () => {
@@ -72,30 +80,40 @@ const Scene = () => {
 
     useFrame(() => {
         if (!isDragging.current) {
-            velocity.current *= 0.95 // Friction
-            targetScrollRef.current += velocity.current
+            // Friction
+            velocity.current.x *= 0.95
+            velocity.current.y *= 0.95
+
+            targetScrollRefX.current += velocity.current.x
+            targetScrollRefY.current += velocity.current.y
         }
 
         // Smooth scroll interpolation
-        scrollRef.current += (targetScrollRef.current - scrollRef.current) * 0.1
+        scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.1
+        scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.1
     })
 
     return (
         <group>
-            {COLUMNS.map((col) => (
-                <group key={col.id}>
-                    {Array.from({ length: COUNT }).map((_, i) => (
-                        <Card
-                            key={i}
-                            index={i}
-                            scrollRef={scrollRef}
-                            spacing={SPACING}
-                            totalHeight={TOTAL_HEIGHT}
-                            xOffset={col.xOffset}
-                        />
-                    ))}
-                </group>
-            ))}
+            <Suspense fallback={null}>
+                {Array.from({ length: COLS }).map((_, colIndex) => (
+                    <group key={`col-${colIndex}`}>
+                        {Array.from({ length: ROWS }).map((_, rowIndex) => (
+                            <Card
+                                key={`card-${colIndex}-${rowIndex}`}
+                                colIndex={colIndex}
+                                rowIndex={rowIndex}
+                                scrollRefX={scrollRefX}
+                                scrollRefY={scrollRefY}
+                                spacingX={SPACING_X}
+                                spacingY={SPACING_Y}
+                                totalHeight={TOTAL_HEIGHT}
+                                totalWidth={TOTAL_WIDTH}
+                            />
+                        ))}
+                    </group>
+                ))}
+            </Suspense>
 
             <EffectComposer>
                 <Vignette eskil={false} offset={0.1} darkness={1.1} />

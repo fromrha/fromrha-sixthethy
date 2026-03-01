@@ -1,49 +1,69 @@
-import { useRef } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useRef, useMemo } from 'react'
+import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 
 const RADIUS = 12 // Radius of the large invisible cylinder
 
-const Card = ({ index, scrollRef, spacing, totalHeight, xOffset = 0 }) => {
+const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, totalHeight, totalWidth }) => {
     const meshRef = useRef()
     const materialRef = useRef()
-    const prevScrollRef = useRef(0)
+    const prevScrollRefY = useRef(0)
+    const prevScrollRefX = useRef(0)
+
+    // Load random image texture
+    const seedId = colIndex * 100 + rowIndex // unique seed per card
+    const texture = useLoader(THREE.TextureLoader, `https://picsum.photos/seed/${seedId}/800/600`)
+
+    // Apply Linear filtering for sharp images during distortion
+    useMemo(() => {
+        if (texture) {
+            texture.minFilter = THREE.LinearFilter
+            texture.magFilter = THREE.LinearFilter
+            texture.colorSpace = THREE.SRGBColorSpace
+        }
+    }, [texture])
 
     useFrame((state) => {
         if (!meshRef.current) return
 
         // Calculate scroll velocity for tilt
-        const velocity = scrollRef.current - prevScrollRef.current
-        prevScrollRef.current = scrollRef.current
+        const velocityY = scrollRefY.current - prevScrollRefY.current
+        const velocityX = scrollRefX.current - prevScrollRefX.current
+        prevScrollRefY.current = scrollRefY.current
+        prevScrollRefX.current = scrollRefX.current
 
-        // Calculate base Y position
-        let y = index * spacing - scrollRef.current
-
-        // Infinite recycling logic
+        // Calculate base Y position (Vertical Infinite Wrap)
+        let y = rowIndex * spacingY - scrollRefY.current
         const halfHeight = totalHeight / 2
-        // Wrap Y around the total height range [-halfHeight, halfHeight]
         y = ((y + halfHeight) % totalHeight + totalHeight) % totalHeight - halfHeight
 
+        // Calculate base X position (Horizontal Infinite Wrap)
+        let x = colIndex * spacingX - scrollRefX.current
+        const halfWidth = totalWidth / 2
+        x = ((x + halfWidth) % totalWidth + totalWidth) % totalWidth - halfWidth
+
         // Cylindrical positioning math
-        // Depth (Z) and Rotation (X) based on Y position along the arc
         const angle = y / RADIUS
         const baseZ = Math.cos(angle) * RADIUS - RADIUS
         const baseRotationX = -angle
 
         // Update mesh position
-        meshRef.current.position.set(xOffset, y, baseZ)
+        meshRef.current.position.set(x, y, baseZ)
 
         // Tilt effect based on mouse and scroll velocity
-        // state.pointer holds normalized mouse coordinates: [-1, 1]
-        const tiltX = (state.pointer.y * 0.1) + (velocity * 2)
-        const tiltY = (state.pointer.x * 0.1)
+        const tiltX = (state.pointer.y * 0.1) + (velocityY * 2)
+        const tiltY = (state.pointer.x * 0.1) + (velocityX * 2)
 
         meshRef.current.rotation.set(baseRotationX + tiltX, tiltY, 0)
 
-        // Simple fade based on distance from center
-        const opacity = Math.max(0, 1 - Math.abs(y) / (totalHeight / 2))
+        // Adjust opacity slightly based on distance from center for better blending at edges
+        const distFromCenter = Math.sqrt(x * x + y * y)
+        const maxDist = Math.min(halfHeight, halfWidth) * 1.5
+        const opacity = Math.max(0, 1 - (distFromCenter / maxDist))
+
         if (materialRef.current) {
             materialRef.current.opacity = opacity
+            materialRef.current.transparent = true
         }
     })
 
@@ -52,7 +72,8 @@ const Card = ({ index, scrollRef, spacing, totalHeight, xOffset = 0 }) => {
             <planeGeometry args={[3, 2, 32, 32]} />
             <meshStandardMaterial
                 ref={materialRef}
-                color="#333"
+                map={texture}
+                color="#fff" // Clean color underlying texture
                 transparent
                 side={THREE.DoubleSide}
                 onBeforeCompile={(shader) => {
