@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const RADIUS = 15 // Radius of the large invisible cylinder
+const RADIUS = 12 // Radius of the large invisible cylinder
 
 const Card = ({ index, scrollRef, spacing, totalHeight, xOffset = 0 }) => {
     const meshRef = useRef()
@@ -64,14 +64,13 @@ const Card = ({ index, scrollRef, spacing, totalHeight, xOffset = 0 }) => {
                         // Calculate world position
                         vec4 worldPos = modelMatrix * vec4(position, 1.0);
                         
-                        // Distance from screen center (0,0,0) in world space
-                        float dist = length(worldPos.xy);
+                        // Calculate distance from screen center
+                        float EdgeDistance = pow(length(worldPos.xy), 2.0);
+                        float DistortionStrength = -0.012;
                         
-                        // Lens distortion effect - bend away from camera toward edges
-                        float bendAmount = pow(dist, 2.0) * -0.015;
-                        
-                        // Apply the bend
-                        transformed.z += bendAmount;
+                        // Phantom Land style Vertex Distortion
+                        // VertexPosition = Position + (DistortionStrength * Normal * EdgeDistance)
+                        transformed += normal * (DistortionStrength * EdgeDistance);
                         `
                     )
                 }}
