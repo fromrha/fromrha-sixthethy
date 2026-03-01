@@ -45,15 +45,15 @@ const Scene = () => {
 
             lastPos.current = { x: e.clientX, y: e.clientY }
 
-            // Update Target Scroll
+            // Update Target Scroll (Fixing axis: match mouse drag direction like paper)
             const scrollDeltaY = deltaY * 0.015
             const scrollDeltaX = deltaX * 0.015
 
-            targetScrollRefY.current -= scrollDeltaY
-            targetScrollRefX.current -= scrollDeltaX
+            targetScrollRefY.current += scrollDeltaY
+            targetScrollRefX.current += scrollDeltaX
 
             // Set Velocity
-            velocity.current = { x: -scrollDeltaX, y: -scrollDeltaY }
+            velocity.current = { x: scrollDeltaX, y: scrollDeltaY }
         }
 
         const handlePointerUp = () => {
@@ -95,6 +95,7 @@ const Scene = () => {
 
     return (
         <group>
+            <ambientLight intensity={1.5} />
             <Suspense fallback={null}>
                 {Array.from({ length: COLS }).map((_, colIndex) => (
                     <group key={`col-${colIndex}`}>

@@ -5,6 +5,7 @@ function App() {
   return (
     <Canvas
       shadows
+      colorManagement={true}
       camera={{ position: [0, 0, 6], fov: 70 }}
       style={{ height: '100vh', width: '100vw', touchAction: 'none' }}
     >

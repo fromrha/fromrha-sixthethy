@@ -19,11 +19,17 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         if (texture) {
             texture.minFilter = THREE.LinearFilter
             texture.magFilter = THREE.LinearFilter
-            texture.colorSpace = THREE.SRGBColorSpace
+            texture.encoding = THREE.sRGBEncoding // Vibrant un-dimmed images
+            texture.colorSpace = THREE.SRGBColorSpace // Fallback for newer Three.js versions
         }
     }, [texture])
 
-    useFrame((state) => {
+    // Shader Uniforms
+    const uniforms = useMemo(() => ({
+        uVelocity: { value: 0.0 }
+    }), [])
+
+    useFrame((state, delta) => {
         if (!meshRef.current) return
 
         // Calculate scroll velocity for tilt
@@ -31,6 +37,13 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         const velocityX = scrollRefX.current - prevScrollRefX.current
         prevScrollRefY.current = scrollRefY.current
         prevScrollRefX.current = scrollRefX.current
+
+        // Calculate reactive drag velocity for shader (normalized & clamped)
+        const rawVelocity = Math.sqrt(velocityX * velocityX + velocityY * velocityY) * 5.0
+        const clampedVelocity = Math.min(rawVelocity, 0.5)
+
+        // Dampen the velocity for a smoother transition instead of snapping
+        uniforms.uVelocity.value = THREE.MathUtils.damp(uniforms.uVelocity.value, clampedVelocity, 10, delta)
 
         // Calculate base Y position (Vertical Infinite Wrap)
         let y = rowIndex * spacingY - scrollRefY.current
@@ -77,6 +90,11 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                 transparent
                 side={THREE.DoubleSide}
                 onBeforeCompile={(shader) => {
+                    shader.uniforms.uVelocity = uniforms.uVelocity
+                    shader.vertexShader = `
+                        uniform float uVelocity;
+                        ${shader.vertexShader}
+                    `
                     shader.vertexShader = shader.vertexShader.replace(
                         '#include <begin_vertex>',
                         `
@@ -87,10 +105,12 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                         
                         // Calculate distance from screen center
                         float EdgeDistance = pow(length(worldPos.xy), 2.0);
-                        float DistortionStrength = -0.012;
+                        
+                        // Reactive Distortion Strength based on velocity, clamped between 0 and 0.5
+                        float distClamp = clamp(uVelocity, 0.0, 0.5);
+                        float DistortionStrength = distClamp * -0.05; 
                         
                         // Phantom Land style Vertex Distortion
-                        // VertexPosition = Position + (DistortionStrength * Normal * EdgeDistance)
                         transformed += normal * (DistortionStrength * EdgeDistance);
                         `
                     )
