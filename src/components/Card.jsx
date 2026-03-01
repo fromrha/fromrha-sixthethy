@@ -106,9 +106,9 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                         // Calculate distance from screen center
                         float EdgeDistance = pow(length(worldPos.xy), 2.0);
                         
-                        // Reactive Distortion Strength based on velocity, clamped between 0 and 0.5
-                        float distClamp = clamp(uVelocity, 0.0, 0.5);
-                        float DistortionStrength = distClamp * -0.05; 
+                        // Reactive Distortion Strength based on velocity, clamped
+                        float distClamp = clamp(uVelocity, 0.0, 0.3);
+                        float DistortionStrength = distClamp * -0.05;
                         
                         // Phantom Land style Vertex Distortion
                         transformed += normal * (DistortionStrength * EdgeDistance);

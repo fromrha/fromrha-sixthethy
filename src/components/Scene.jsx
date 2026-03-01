@@ -5,8 +5,8 @@ import { EffectComposer, Vignette, ChromaticAberration } from '@react-three/post
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 
-const ROWS = 6
-const COLS = 6
+const ROWS = 8
+const COLS = 8
 const SPACING_Y = 2.05
 const SPACING_X = 3.1
 const TOTAL_HEIGHT = ROWS * SPACING_Y
@@ -50,10 +50,10 @@ const Scene = () => {
             const scrollDeltaX = deltaX * 0.015
 
             targetScrollRefY.current += scrollDeltaY
-            targetScrollRefX.current += scrollDeltaX
+            targetScrollRefX.current -= scrollDeltaX
 
             // Set Velocity
-            velocity.current = { x: scrollDeltaX, y: scrollDeltaY }
+            velocity.current = { x: -scrollDeltaX, y: scrollDeltaY }
         }
 
         const handlePointerUp = () => {
@@ -95,7 +95,8 @@ const Scene = () => {
 
     return (
         <group>
-            <ambientLight intensity={1.5} />
+            <ambientLight intensity={2.5} />
+            <directionalLight position={[5, 5, 5]} intensity={1.0} />
             <Suspense fallback={null}>
                 {Array.from({ length: COLS }).map((_, colIndex) => (
                     <group key={`col-${colIndex}`}>
