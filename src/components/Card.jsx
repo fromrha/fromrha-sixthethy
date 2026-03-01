@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const RADIUS = 12 // Radius of the large invisible cylinder
+const RADIUS = 30 // Larger = flatter cylinder, less extreme curvature
 
 const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, totalHeight, totalWidth, isPointerInside }) => {
     const meshRef = useRef()
@@ -95,7 +95,13 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
             <meshStandardMaterial
                 ref={materialRef}
                 map={texture}
-                color="#fff" // Clean color underlying texture
+                color="#fff"
+                emissive="#ffffff"
+                emissiveMap={texture}
+                emissiveIntensity={0.4}
+                envMapIntensity={1.5}
+                roughness={0.4}
+                metalness={0.0}
                 transparent
                 side={THREE.DoubleSide}
                 onBeforeCompile={(shader) => {
@@ -117,7 +123,7 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                         
                         // Reactive Distortion Strength based on velocity, clamped
                         float distClamp = clamp(uVelocity, 0.0, 0.3);
-                        float DistortionStrength = distClamp * -0.05;
+                        float DistortionStrength = distClamp * -0.015; // Reduced: was -0.05
                         
                         // Phantom Land style Vertex Distortion
                         transformed += normal * (DistortionStrength * EdgeDistance);

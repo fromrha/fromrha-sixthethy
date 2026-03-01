@@ -1,5 +1,6 @@
 import { useRef, useEffect, Suspense } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Environment } from '@react-three/drei'
 import Card from './Card'
 import { EffectComposer, Vignette, ChromaticAberration } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
@@ -33,6 +34,10 @@ const Scene = () => {
     // Reactive chromatic aberration offset (starts at zero)
     const chromaticOffset = useRef(new Vector2(0, 0))
     const chromaticOffsetDamped = useRef(new Vector2(0, 0))
+
+    // Grid wiggle: ref to the card group + smoothed rotation target
+    const gridGroupRef = useRef()
+    const smoothGridRot = useRef({ x: 0, y: 0 })
 
     useEffect(() => {
         const preventDefault = (e) => e.preventDefault()
@@ -107,6 +112,20 @@ const Scene = () => {
         scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.1
         scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.1
 
+        // --- Window Wiggle ---
+        // When pointer is inside: tilt grid toward mouse position
+        // When outside: smoothly return to flat (0, 0)
+        const targetRotX = isPointerInside.current ? -state.pointer.y * 0.06 : 0
+        const targetRotY = isPointerInside.current ? state.pointer.x * 0.06 : 0
+
+        smoothGridRot.current.x = THREE.MathUtils.damp(smoothGridRot.current.x, targetRotX, 4, delta)
+        smoothGridRot.current.y = THREE.MathUtils.damp(smoothGridRot.current.y, targetRotY, 4, delta)
+
+        if (gridGroupRef.current) {
+            gridGroupRef.current.rotation.x = smoothGridRot.current.x
+            gridGroupRef.current.rotation.y = smoothGridRot.current.y
+        }
+
         // Reactive chromatic aberration: scale with velocity magnitude, 0 when idle
         const speed = Math.sqrt(
             velocity.current.x * velocity.current.x +
@@ -120,28 +139,34 @@ const Scene = () => {
 
     return (
         <group>
-            <ambientLight intensity={2.5} />
+            {/* HDR Environment map for vibrant, professional lighting */}
+            <Environment preset="city" />
+            <ambientLight intensity={3.0} />
             <directionalLight position={[5, 5, 5]} intensity={1.0} />
-            <Suspense fallback={null}>
-                {Array.from({ length: COLS }).map((_, colIndex) => (
-                    <group key={`col-${colIndex}`}>
-                        {Array.from({ length: ROWS }).map((_, rowIndex) => (
-                            <Card
-                                key={`card-${colIndex}-${rowIndex}`}
-                                colIndex={colIndex}
-                                rowIndex={rowIndex}
-                                scrollRefX={scrollRefX}
-                                scrollRefY={scrollRefY}
-                                spacingX={SPACING_X}
-                                spacingY={SPACING_Y}
-                                totalHeight={TOTAL_HEIGHT}
-                                totalWidth={TOTAL_WIDTH}
-                                isPointerInside={isPointerInside}
-                            />
-                        ))}
-                    </group>
-                ))}
-            </Suspense>
+
+            {/* Grid group with wiggle rotation applied */}
+            <group ref={gridGroupRef}>
+                <Suspense fallback={null}>
+                    {Array.from({ length: COLS }).map((_, colIndex) => (
+                        <group key={`col-${colIndex}`}>
+                            {Array.from({ length: ROWS }).map((_, rowIndex) => (
+                                <Card
+                                    key={`card-${colIndex}-${rowIndex}`}
+                                    colIndex={colIndex}
+                                    rowIndex={rowIndex}
+                                    scrollRefX={scrollRefX}
+                                    scrollRefY={scrollRefY}
+                                    spacingX={SPACING_X}
+                                    spacingY={SPACING_Y}
+                                    totalHeight={TOTAL_HEIGHT}
+                                    totalWidth={TOTAL_WIDTH}
+                                    isPointerInside={isPointerInside}
+                                />
+                            ))}
+                        </group>
+                    ))}
+                </Suspense>
+            </group>
 
             <EffectComposer>
                 <Vignette eskil={false} offset={0.1} darkness={0.8} />
