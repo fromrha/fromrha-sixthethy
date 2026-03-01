@@ -4,11 +4,15 @@ import * as THREE from 'three'
 
 const RADIUS = 12 // Radius of the large invisible cylinder
 
-const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, totalHeight, totalWidth }) => {
+const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, totalHeight, totalWidth, isPointerInside }) => {
     const meshRef = useRef()
     const materialRef = useRef()
     const prevScrollRefY = useRef(0)
     const prevScrollRefX = useRef(0)
+
+    // Smooth pointer — lerps to actual pointer when inside, lerps to 0 when outside
+    const smoothPointerX = useRef(0)
+    const smoothPointerY = useRef(0)
 
     // Load random image texture
     const seedId = colIndex * 100 + rowIndex // unique seed per card
@@ -45,6 +49,11 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         // Dampen the velocity for a smoother transition instead of snapping
         uniforms.uVelocity.value = THREE.MathUtils.damp(uniforms.uVelocity.value, clampedVelocity, 10, delta)
 
+        // Smooth pointer: lerp toward actual pointer when inside viewport, back to 0 when outside
+        const pointerTarget = isPointerInside?.current ? state.pointer : { x: 0, y: 0 }
+        smoothPointerX.current = THREE.MathUtils.lerp(smoothPointerX.current, pointerTarget.x, 0.06)
+        smoothPointerY.current = THREE.MathUtils.lerp(smoothPointerY.current, pointerTarget.y, 0.06)
+
         // Calculate base Y position (Vertical Infinite Wrap)
         let y = rowIndex * spacingY - scrollRefY.current
         const halfHeight = totalHeight / 2
@@ -63,9 +72,9 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         // Update mesh position
         meshRef.current.position.set(x, y, baseZ)
 
-        // Tilt effect based on mouse and scroll velocity
-        const tiltX = (state.pointer.y * 0.1) + (velocityY * 2)
-        const tiltY = (state.pointer.x * 0.1) + (velocityX * 2)
+        // Tilt effect — uses smoothed pointer so it returns to flat when mouse leaves
+        const tiltX = (smoothPointerY.current * 0.1) + (velocityY * 2)
+        const tiltY = (smoothPointerX.current * 0.1) + (velocityX * 2)
 
         meshRef.current.rotation.set(baseRotationX + tiltX, tiltY, 0)
 

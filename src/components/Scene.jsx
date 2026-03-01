@@ -27,6 +27,9 @@ const Scene = () => {
     const lastPos = useRef({ x: 0, y: 0 })
     const velocity = useRef({ x: 0, y: 0 })
 
+    // Track whether the pointer is inside the viewport
+    const isPointerInside = useRef(false)
+
     // Reactive chromatic aberration offset (starts at zero)
     const chromaticOffset = useRef(new Vector2(0, 0))
     const chromaticOffsetDamped = useRef(new Vector2(0, 0))
@@ -66,12 +69,17 @@ const Scene = () => {
             document.body.style.cursor = 'grab'
         }
 
+        const handlePointerEnter = () => { isPointerInside.current = true }
+        const handlePointerLeave = () => { isPointerInside.current = false }
+
         document.body.style.cursor = 'grab'
 
         window.addEventListener('pointerdown', handlePointerDown)
         window.addEventListener('pointermove', handlePointerMove)
         window.addEventListener('pointerup', handlePointerUp)
         window.addEventListener('pointercancel', handlePointerUp)
+        window.addEventListener('pointerenter', handlePointerEnter)
+        window.addEventListener('pointerleave', handlePointerLeave)
 
         return () => {
             document.removeEventListener('touchmove', preventDefault)
@@ -79,6 +87,8 @@ const Scene = () => {
             window.removeEventListener('pointermove', handlePointerMove)
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
+            window.removeEventListener('pointerenter', handlePointerEnter)
+            window.removeEventListener('pointerleave', handlePointerLeave)
             document.body.style.cursor = 'auto'
         }
     }, [])
@@ -126,6 +136,7 @@ const Scene = () => {
                                 spacingY={SPACING_Y}
                                 totalHeight={TOTAL_HEIGHT}
                                 totalWidth={TOTAL_WIDTH}
+                                isPointerInside={isPointerInside}
                             />
                         ))}
                     </group>
