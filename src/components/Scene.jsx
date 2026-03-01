@@ -10,7 +10,7 @@ import { Vector2 } from 'three'
 const ROWS = 8
 const COLS = 8
 const SPACING_Y = 2.05
-const SPACING_X = 3.1
+const SPACING_X = 3.05 // Adjusted to match vertical gap of 0.05 (3 + 0.05)
 const TOTAL_HEIGHT = ROWS * SPACING_Y
 const TOTAL_WIDTH = COLS * SPACING_X
 

@@ -73,8 +73,10 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         meshRef.current.position.set(x, y, baseZ)
 
         // Tilt effect — uses smoothed pointer so it returns to flat when mouse leaves
-        const tiltX = (smoothPointerY.current * 0.1) + (velocityY * 2)
-        const tiltY = (smoothPointerX.current * 0.1) + (velocityX * 2)
+        // Drastically reduced multipliers and clamped the max tilt to prevent motion sickness
+        const maxTilt = 0.3 // limits the rotation to a reasonable max angle
+        const tiltX = (smoothPointerY.current * 0.05) + THREE.MathUtils.clamp(velocityY * 0.5, -maxTilt, maxTilt)
+        const tiltY = (smoothPointerX.current * 0.05) + THREE.MathUtils.clamp(velocityX * 0.5, -maxTilt, maxTilt)
 
         meshRef.current.rotation.set(baseRotationX + tiltX, tiltY, 0)
 
