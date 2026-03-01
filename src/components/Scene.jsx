@@ -16,7 +16,7 @@ const TOTAL_WIDTH = COLS * SPACING_X
 
 const Scene = () => {
 
-    const gridRef = useRef(null);
+    const containerGroup = useRef();
 
     // Scroll state for Y (Vertical)
     const scrollRefY = useRef(0)
@@ -112,8 +112,8 @@ const Scene = () => {
         }
 
         // Smooth scroll interpolation
-        scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.1
-        scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.1
+        scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.6
+        scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.6
 
         // --- Window Wiggle ---
         // When pointer is inside: tilt grid toward mouse position
@@ -138,10 +138,24 @@ const Scene = () => {
         chromaticOffsetDamped.current.x = THREE.MathUtils.damp(chromaticOffsetDamped.current.x, targetCA, 8, delta)
         chromaticOffsetDamped.current.y = THREE.MathUtils.damp(chromaticOffsetDamped.current.y, targetCA, 8, delta)
         chromaticOffset.current.set(chromaticOffsetDamped.current.x, chromaticOffsetDamped.current.y)
+
+        const { x, y } = state.mouse;
+
+        // 2. Check if the group exists yet
+        if (containerGroup.current) {
+            // 3. Set the target rotation based on mouse position
+            // We rotate Y based on X-axis mouse movement, and X based on Y-axis
+            const targetRotationX = -y * 0.1; 
+            const targetRotationY = x * 0.1;
+
+            // 4. Smoothly move (lerp) the current rotation toward the target
+            containerGroup.current.rotation.x += (targetRotationX - containerGroup.current.rotation.x) * 0.05;
+            containerGroup.current.rotation.y += (targetRotationY - containerGroup.current.rotation.y) * 0.05;
+        }
     })
 
     return (
-        <group>
+        <group ref={containerGroup}>
             {/* HDR Environment map for vibrant, professional lighting */}
             <Environment preset="city" />
             <ambientLight intensity={3.0} />
