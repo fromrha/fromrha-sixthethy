@@ -4,6 +4,7 @@ import Card from './Card'
 import { EffectComposer, Vignette, ChromaticAberration } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
+import { Vector2 } from 'three'
 
 const ROWS = 8
 const COLS = 8
@@ -25,6 +26,10 @@ const Scene = () => {
     const isDragging = useRef(false)
     const lastPos = useRef({ x: 0, y: 0 })
     const velocity = useRef({ x: 0, y: 0 })
+
+    // Reactive chromatic aberration offset (starts at zero)
+    const chromaticOffset = useRef(new Vector2(0, 0))
+    const chromaticOffsetDamped = useRef(new Vector2(0, 0))
 
     useEffect(() => {
         const preventDefault = (e) => e.preventDefault()
@@ -78,7 +83,7 @@ const Scene = () => {
         }
     }, [])
 
-    useFrame(() => {
+    useFrame((state, delta) => {
         if (!isDragging.current) {
             // Friction
             velocity.current.x *= 0.95
@@ -91,6 +96,16 @@ const Scene = () => {
         // Smooth scroll interpolation
         scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.1
         scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.1
+
+        // Reactive chromatic aberration: scale with velocity magnitude, 0 when idle
+        const speed = Math.sqrt(
+            velocity.current.x * velocity.current.x +
+            velocity.current.y * velocity.current.y
+        )
+        const targetCA = Math.min(speed * 0.012, 0.008) // clamp max so it's never broken
+        chromaticOffsetDamped.current.x = THREE.MathUtils.damp(chromaticOffsetDamped.current.x, targetCA, 8, delta)
+        chromaticOffsetDamped.current.y = THREE.MathUtils.damp(chromaticOffsetDamped.current.y, targetCA, 8, delta)
+        chromaticOffset.current.set(chromaticOffsetDamped.current.x, chromaticOffsetDamped.current.y)
     })
 
     return (
@@ -118,10 +133,10 @@ const Scene = () => {
             </Suspense>
 
             <EffectComposer>
-                <Vignette eskil={false} offset={0.1} darkness={1.1} />
+                <Vignette eskil={false} offset={0.1} darkness={0.8} />
                 <ChromaticAberration
                     blendFunction={BlendFunction.NORMAL}
-                    offset={new THREE.Vector2(0.002, 0.002)}
+                    offset={chromaticOffset.current}
                 />
             </EffectComposer>
         </group>
