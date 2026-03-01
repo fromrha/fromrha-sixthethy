@@ -15,6 +15,9 @@ const TOTAL_HEIGHT = ROWS * SPACING_Y
 const TOTAL_WIDTH = COLS * SPACING_X
 
 const Scene = () => {
+
+    const gridRef = useRef(null);
+
     // Scroll state for Y (Vertical)
     const scrollRefY = useRef(0)
     const targetScrollRefY = useRef(0)
