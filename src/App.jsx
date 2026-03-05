@@ -56,51 +56,55 @@ function App() {
           letterSpacing: '0.5px'
         }}>
 
-          {/* Logo (Left) with Flip Animation */}
-          <div
-            style={{
-              pointerEvents: 'auto',
-              cursor: 'pointer',
-              flex: 1,
-              perspective: '1000px', /* Required for 3D flip */
-              height: '32px'
-            }}
-            onMouseEnter={() => setIsLogoHovered(true)}
-            onMouseLeave={() => setIsLogoHovered(false)}
-          >
+          {/* Logo (Left) with Barrel/Cylinder Animation */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start' }}>
             <div
               style={{
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                transformStyle: 'preserve-3d',
-                transform: isLogoHovered ? 'rotateX(180deg)' : 'rotateX(0deg)'
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                perspective: '1000px',
+                height: '32px'
               }}
+              onMouseEnter={() => setIsLogoHovered(true)}
+              onMouseLeave={() => setIsLogoHovered(false)}
             >
-              {/* Front side: FromRHA */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backfaceVisibility: 'hidden'
-              }}>
-                <img src={brandLogo} alt="FromRHA Logo" style={{ height: '32px' }} />
-              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  height: '100%',
+                  transition: 'transform 0.6s cubic-bezier(0.76, 0, 0.24, 1)',
+                  transformStyle: 'preserve-3d',
+                  transform: isLogoHovered ? 'translateZ(-16px) rotateX(-90deg)' : 'translateZ(-16px) rotateX(0deg)'
+                }}
+              >
+                {/* Invisible footprint gives container its natural width so hover boundary is tight */}
+                <img src={brandLogo} alt="" style={{ height: '32px', visibility: 'hidden', pointerEvents: 'none' }} />
 
-              {/* Back side: Shinrinyoku */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backfaceVisibility: 'hidden',
-                transform: 'rotateX(180deg)',
-              }}>
-                <img src={shinrinyokuLogo} alt="Shinrinyoku Logo" style={{ height: '32px', transform: 'translateY(-2px)' }} />
+                {/* Front face (FromRHA) */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateX(0deg) translateZ(16px)'
+                }}>
+                  <img src={brandLogo} alt="FromRHA Logo" style={{ height: '32px', display: 'block' }} />
+                </div>
+
+                {/* Top face (Shinrinyoku) - Rolls down into view */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateX(90deg) translateZ(16px)',
+                }}>
+                  <img src={shinrinyokuLogo} alt="Shinrinyoku Logo" style={{ height: '32px', display: 'block' }} />
+                </div>
               </div>
             </div>
           </div>
