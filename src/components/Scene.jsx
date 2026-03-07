@@ -59,10 +59,10 @@ const Scene = () => {
             const scrollDeltaX = deltaX * 0.015
 
             targetScrollRefY.current += scrollDeltaY
-            targetScrollRefX.current += scrollDeltaX
+            targetScrollRefX.current -= scrollDeltaX
 
             // Set Velocity
-            velocity.current = { x: scrollDeltaX, y: scrollDeltaY }
+            velocity.current = { x: -scrollDeltaX, y: scrollDeltaY }
         }
 
         const handlePointerUp = () => {
