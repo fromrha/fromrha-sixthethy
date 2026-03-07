@@ -20,11 +20,11 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
 
     // Apply Linear filtering for sharp images during distortion
     useMemo(() => {
-        if (texture) {
+        if (texture && texture.minFilter !== THREE.LinearFilter) {
             texture.minFilter = THREE.LinearFilter
             texture.magFilter = THREE.LinearFilter
-            texture.encoding = THREE.sRGBEncoding // Vibrant un-dimmed images
-            texture.colorSpace = THREE.SRGBColorSpace // Fallback for newer Three.js versions
+            texture.colorSpace = THREE.SRGBColorSpace 
+            texture.needsUpdate = true
         }
     }, [texture])
 
@@ -50,9 +50,10 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
         uniforms.uVelocity.value = THREE.MathUtils.damp(uniforms.uVelocity.value, clampedVelocity, 10, delta)
 
         // Smooth pointer: lerp toward actual pointer when inside viewport, back to 0 when outside
-        const pointerTarget = isPointerInside?.current ? state.pointer : { x: 0, y: 0 }
-        smoothPointerX.current = THREE.MathUtils.lerp(smoothPointerX.current, pointerTarget.x, 0.06)
-        smoothPointerY.current = THREE.MathUtils.lerp(smoothPointerY.current, pointerTarget.y, 0.06)
+        const targetX = isPointerInside?.current ? state.pointer.x : 0
+        const targetY = isPointerInside?.current ? state.pointer.y : 0
+        smoothPointerX.current = THREE.MathUtils.lerp(smoothPointerX.current, targetX, 0.06)
+        smoothPointerY.current = THREE.MathUtils.lerp(smoothPointerY.current, targetY, 0.06)
 
         // Calculate base Y position (Vertical Infinite Wrap)
         let y = rowIndex * spacingY - scrollRefY.current
@@ -93,7 +94,7 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
 
     return (
         <mesh ref={meshRef}>
-            <planeGeometry args={[3, 2, 32, 32]} />
+            <planeGeometry args={[3, 2, 16, 16]} />
             <meshStandardMaterial
                 ref={materialRef}
                 map={texture}
@@ -112,6 +113,22 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                         uniform float uVelocity;
                         ${shader.vertexShader}
                     `
+                    
+                    // 1. Lens Distortion: Warp UVs for barrel distortion at edges
+                    shader.vertexShader = shader.vertexShader.replace(
+                        '#include <uv_vertex>',
+                        `
+                        #include <uv_vertex>
+                        #ifdef USE_MAP
+                            vec2 centeredUv = vMapUv - 0.5;
+                            float uvDist = dot(centeredUv, centeredUv);
+                            // uStrength = 0.4 (subtle barrel distortion from original effect)
+                            vMapUv = centeredUv * (1.0 + 0.4 * uvDist) + 0.5;
+                        #endif
+                        `
+                    )
+
+                    // 2. Velocity-based Geometry Displacement (Extrusion)
                     shader.vertexShader = shader.vertexShader.replace(
                         '#include <begin_vertex>',
                         `
@@ -125,7 +142,7 @@ const Card = ({ colIndex, rowIndex, scrollRefX, scrollRefY, spacingY, spacingX, 
                         
                         // Reactive Distortion Strength based on velocity, clamped
                         float distClamp = clamp(uVelocity, 0.0, 0.3);
-                        float DistortionStrength = distClamp * -0.015; // Reduced: was -0.05
+                        float DistortionStrength = distClamp * -0.015;
                         
                         // Phantom Land style Vertex Distortion
                         transformed += normal * (DistortionStrength * EdgeDistance);

@@ -2,10 +2,7 @@ import { useRef, useEffect, Suspense } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
 import Card from './Card'
-import { EffectComposer, Vignette, ChromaticAberration } from '@react-three/postprocessing'
-import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
-import { Vector2 } from 'three'
 
 const ROWS = 8
 const COLS = 8
@@ -33,10 +30,6 @@ const Scene = () => {
 
     // Track whether the pointer is inside the viewport
     const isPointerInside = useRef(false)
-
-    // Reactive chromatic aberration offset (starts at zero)
-    const chromaticOffset = useRef(new Vector2(0, 0))
-    const chromaticOffsetDamped = useRef(new Vector2(0, 0))
 
     // Grid wiggle: ref to the card group + smoothed rotation target
     const gridGroupRef = useRef()
@@ -66,10 +59,10 @@ const Scene = () => {
             const scrollDeltaX = deltaX * 0.015
 
             targetScrollRefY.current += scrollDeltaY
-            targetScrollRefX.current -= scrollDeltaX
+            targetScrollRefX.current += scrollDeltaX
 
             // Set Velocity
-            velocity.current = { x: -scrollDeltaX, y: scrollDeltaY }
+            velocity.current = { x: scrollDeltaX, y: scrollDeltaY }
         }
 
         const handlePointerUp = () => {
@@ -115,42 +108,16 @@ const Scene = () => {
         scrollRefX.current += (targetScrollRefX.current - scrollRefX.current) * 0.6
         scrollRefY.current += (targetScrollRefY.current - scrollRefY.current) * 0.6
 
-        // --- Window Wiggle ---
-        // When pointer is inside: tilt grid toward mouse position
-        // When outside: smoothly return to flat (0, 0)
+        // --- Global Tilt Wiggle ---
         const targetRotX = isPointerInside.current ? -state.pointer.y * 0.06 : 0
         const targetRotY = isPointerInside.current ? state.pointer.x * 0.06 : 0
 
-        smoothGridRot.current.x = THREE.MathUtils.damp(smoothGridRot.current.x, targetRotX, 4, delta)
-        smoothGridRot.current.y = THREE.MathUtils.damp(smoothGridRot.current.y, targetRotY, 4, delta)
+        smoothGridRot.current.x = THREE.MathUtils.lerp(smoothGridRot.current.x, targetRotX, 0.05)
+        smoothGridRot.current.y = THREE.MathUtils.lerp(smoothGridRot.current.y, targetRotY, 0.05)
 
         if (gridGroupRef.current) {
             gridGroupRef.current.rotation.x = smoothGridRot.current.x
             gridGroupRef.current.rotation.y = smoothGridRot.current.y
-        }
-
-        // Reactive chromatic aberration: scale with velocity magnitude, 0 when idle
-        const speed = Math.sqrt(
-            velocity.current.x * velocity.current.x +
-            velocity.current.y * velocity.current.y
-        )
-        const targetCA = Math.min(speed * 0.012, 0.008) // clamp max so it's never broken
-        chromaticOffsetDamped.current.x = THREE.MathUtils.damp(chromaticOffsetDamped.current.x, targetCA, 8, delta)
-        chromaticOffsetDamped.current.y = THREE.MathUtils.damp(chromaticOffsetDamped.current.y, targetCA, 8, delta)
-        chromaticOffset.current.set(chromaticOffsetDamped.current.x, chromaticOffsetDamped.current.y)
-
-        const { x, y } = state.mouse;
-
-        // 2. Check if the group exists yet
-        if (containerGroup.current) {
-            // 3. Set the target rotation based on mouse position
-            // We rotate Y based on X-axis mouse movement, and X based on Y-axis
-            const targetRotationX = -y * 0.1; 
-            const targetRotationY = x * 0.1;
-
-            // 4. Smoothly move (lerp) the current rotation toward the target
-            containerGroup.current.rotation.x += (targetRotationX - containerGroup.current.rotation.x) * 0.05;
-            containerGroup.current.rotation.y += (targetRotationY - containerGroup.current.rotation.y) * 0.05;
         }
     })
 
@@ -184,14 +151,6 @@ const Scene = () => {
                     ))}
                 </Suspense>
             </group>
-
-            <EffectComposer>
-                <Vignette eskil={false} offset={0.1} darkness={0.8} />
-                <ChromaticAberration
-                    blendFunction={BlendFunction.NORMAL}
-                    offset={chromaticOffset.current}
-                />
-            </EffectComposer>
         </group>
     )
 }
